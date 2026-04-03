@@ -2,6 +2,8 @@
 
 Portable builds of [Deep-Live-Cam](https://github.com/hacksider/Deep-Live-Cam) — real-time face swap and video deepfake tool.
 
+![Demo](media/demo.gif)
+
 **No Python, no pip, no setup.** Download, extract, run. Everything stays inside the folder — no PATH changes, no registry writes, no leftovers.
 
 ## Download
