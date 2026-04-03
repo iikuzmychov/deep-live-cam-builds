@@ -25,11 +25,11 @@ jobs:
         run: |
           UPSTREAM_SHA=$(git ls-remote https://github.com/hacksider/Deep-Live-Cam.git HEAD | cut -f1)
           SHORT_SHA=${UPSTREAM_SHA:0:7}
-          DATE=$(date +%Y-%m-%d)
+          DATETIME=$(date +%Y-%m-%d-%H%M)
           echo "upstream_sha=${UPSTREAM_SHA}" >> "$GITHUB_OUTPUT"
           echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-          echo "date=${DATE}" >> "$GITHUB_OUTPUT"
-          echo "tag=build-${SHORT_SHA}-${DATE}" >> "$GITHUB_OUTPUT"
+          echo "datetime=${DATETIME}" >> "$GITHUB_OUTPUT"
+          echo "tag=build-${SHORT_SHA}-${DATETIME}" >> "$GITHUB_OUTPUT"
 
           if gh release list --repo ${{ github.repository }} --json tagName -q '.[].tagName' | grep -q "$SHORT_SHA"; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -48,22 +48,14 @@ jobs:
       matrix:
         include:
           - name: directml
-            pip_install: pip install onnxruntime-directml
+            onnxruntime: onnxruntime-directml
             provider: dml
-            zip: DeepLiveCam-windows-directml.zip
           - name: cuda
-            pip_install: |
-              pip install -U torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-              pip uninstall -y onnxruntime onnxruntime-gpu
-              pip install onnxruntime-gpu==1.21.0
+            onnxruntime: onnxruntime-gpu
             provider: cuda
-            zip: DeepLiveCam-windows-cuda.zip
           - name: openvino
-            pip_install: |
-              pip uninstall -y onnxruntime onnxruntime-gpu
-              pip install onnxruntime-openvino==1.21.0
+            onnxruntime: onnxruntime-openvino
             provider: openvino
-            zip: DeepLiveCam-windows-openvino.zip
 
     steps:
       - name: Clone upstream
@@ -77,19 +69,15 @@ jobs:
           cache: 'pip'
           cache-dependency-path: 'upstream/requirements.txt'
 
-      - name: Install base dependencies
+      - name: Install dependencies
         shell: bash
         run: |
           cd upstream
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip uninstall -y torch torchvision torchaudio onnxruntime onnxruntime-gpu 2>/dev/null || true
+          pip install ${{ matrix.onnxruntime }}
           pip install pyinstaller
-
-      - name: Install ${{ matrix.name }} provider
-        shell: bash
-        run: |
-          cd upstream
-          ${{ matrix.pip_install }}
 
       - name: Download models
         shell: bash
@@ -186,13 +174,13 @@ jobs:
           set PATH=%~dp0;%PATH%
           start "" "%~dp0DeepLiveCam.exe" --execution-provider cpu %*
           BATEOF
-          7z a -mx1 ../../${{ matrix.zip }} DeepLiveCam/
+          7z a -mx1 ../../DeepLiveCam-windows-${{ matrix.name }}.zip DeepLiveCam/
 
       - name: Upload build
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.zip }}
-          path: ${{ matrix.zip }}
+          name: ${{ matrix.name }}
+          path: DeepLiveCam-windows-${{ matrix.name }}.zip
 
   release:
     needs: [check, build]
@@ -229,9 +217,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create "${{ needs.check.outputs.tag }}" \
-            DeepLiveCam-windows-directml.zip/DeepLiveCam-windows-directml.zip \
-            DeepLiveCam-windows-cuda.zip/DeepLiveCam-windows-cuda.zip \
-            DeepLiveCam-windows-openvino.zip/DeepLiveCam-windows-openvino.zip \
+            directml/DeepLiveCam-windows-directml.zip \
+            cuda/DeepLiveCam-windows-cuda.zip \
+            openvino/DeepLiveCam-windows-openvino.zip \
             --repo ${{ github.repository }} \
-            --title "Deep-Live-Cam ${{ needs.check.outputs.date }} (${{ needs.check.outputs.short_sha }})" \
+            --title "Deep-Live-Cam ${{ needs.check.outputs.datetime }} (${{ needs.check.outputs.short_sha }})" \
             --notes-file release-notes.md
