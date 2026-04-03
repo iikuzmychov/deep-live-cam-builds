@@ -1,0 +1,237 @@
+name: Build Deep-Live-Cam
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+      upstream_sha: ${{ steps.check.outputs.upstream_sha }}
+      short_sha: ${{ steps.check.outputs.short_sha }}
+      date: ${{ steps.check.outputs.date }}
+      tag: ${{ steps.check.outputs.tag }}
+    steps:
+      - name: Check for new upstream release
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          UPSTREAM_SHA=$(git ls-remote https://github.com/hacksider/Deep-Live-Cam.git HEAD | cut -f1)
+          SHORT_SHA=${UPSTREAM_SHA:0:7}
+          DATE=$(date +%Y-%m-%d)
+          echo "upstream_sha=${UPSTREAM_SHA}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "date=${DATE}" >> "$GITHUB_OUTPUT"
+          echo "tag=build-${SHORT_SHA}-${DATE}" >> "$GITHUB_OUTPUT"
+
+          if gh release list --repo ${{ github.repository }} --json tagName -q '.[].tagName' | grep -q "$SHORT_SHA"; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Release for $SHORT_SHA already exists, skipping."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "No release for $SHORT_SHA, building."
+          fi
+
+  build:
+    needs: check
+    if: needs.check.outputs.skip == 'false'
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: directml
+            pip_install: pip install onnxruntime-directml
+            provider: dml
+            zip: DeepLiveCam-windows-directml.zip
+          - name: cuda
+            pip_install: |
+              pip install -U torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+              pip uninstall -y onnxruntime onnxruntime-gpu
+              pip install onnxruntime-gpu==1.21.0
+            provider: cuda
+            zip: DeepLiveCam-windows-cuda.zip
+          - name: openvino
+            pip_install: |
+              pip uninstall -y onnxruntime onnxruntime-gpu
+              pip install onnxruntime-openvino==1.21.0
+            provider: openvino
+            zip: DeepLiveCam-windows-openvino.zip
+
+    steps:
+      - name: Clone upstream
+        shell: bash
+        run: git clone https://github.com/hacksider/Deep-Live-Cam.git upstream
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'upstream/requirements.txt'
+
+      - name: Install base dependencies
+        shell: bash
+        run: |
+          cd upstream
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Install ${{ matrix.name }} provider
+        shell: bash
+        run: |
+          cd upstream
+          ${{ matrix.pip_install }}
+
+      - name: Download models
+        shell: bash
+        run: |
+          cd upstream
+          curl -L -o models/inswapper_128_fp16.onnx "https://huggingface.co/hacksider/deep-live-cam/resolve/main/inswapper_128_fp16.onnx?download=true"
+          cp models/inswapper_128_fp16.onnx models/inswapper_128.onnx
+          curl -L -o models/GFPGANv1.4.pth "https://github.com/TencentARC/GFPGAN/releases/download/v1.3.4/GFPGANv1.4.pth"
+
+      - name: Download FFmpeg
+        shell: bash
+        run: |
+          curl -L -o ffmpeg.zip "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+          7z x ffmpeg.zip -offmpeg_tmp
+          mkdir -p upstream/ffmpeg
+          cp ffmpeg_tmp/ffmpeg-*/bin/ffmpeg.exe upstream/ffmpeg/
+          cp ffmpeg_tmp/ffmpeg-*/bin/ffprobe.exe upstream/ffmpeg/
+
+      - name: Build with PyInstaller
+        shell: bash
+        run: |
+          cd upstream
+          cat > deep-live-cam.spec << 'SPECEOF'
+          # -*- mode: python ; coding: utf-8 -*-
+          from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs, collect_submodules
+
+          datas = [
+              ('models', 'models'),
+              ('modules/ui.json', 'modules'),
+              ('locales', 'locales'),
+              ('tkinter_fix.py', '.'),
+          ]
+          datas += collect_data_files('customtkinter')
+          datas += collect_data_files('onnxruntime')
+          datas += collect_data_files('insightface')
+          datas += collect_data_files('tensorflow')
+          datas += collect_data_files('opennsfw2')
+
+          binaries = collect_dynamic_libs('onnxruntime')
+          binaries += collect_dynamic_libs('cv2')
+
+          hiddenimports = [
+              'tkinter', 'tkinter_fix', 'customtkinter',
+              'PIL', 'PIL.Image', 'cv2', 'numpy',
+              'onnx', 'onnxruntime', 'onnxruntime.capi',
+              'insightface', 'insightface.app', 'insightface.model_zoo',
+              'tensorflow', 'opennsfw2',
+              'pygrabber', 'pygrabber.dshow_graph',
+              'cv2_enumerate_cameras', 'psutil',
+              'protobuf', 'google.protobuf',
+              'scipy', 'sklearn', 'skimage', 'albumentations',
+          ]
+          hiddenimports += collect_submodules('insightface')
+          hiddenimports += collect_submodules('onnxruntime')
+          hiddenimports += collect_submodules('modules')
+          hiddenimports += collect_submodules('modules.processors')
+
+          a = Analysis(
+              ['run.py'],
+              pathex=['.'],
+              binaries=binaries,
+              datas=datas,
+              hiddenimports=hiddenimports,
+              hookspath=[], hooksconfig={}, runtime_hooks=[],
+              excludes=[], win_no_prefer_redirects=False,
+              win_private_assemblies=False, cipher=None, noarchive=False,
+          )
+          pyz = PYZ(a.pure, a.zipped_data, cipher=None)
+          exe = EXE(
+              pyz, a.scripts, [], exclude_binaries=True,
+              name='DeepLiveCam', debug=False, bootloader_ignore_signals=False,
+              strip=False, upx=False, console=True, icon=None
+          )
+          coll = COLLECT(
+              exe, a.binaries, a.zipfiles, a.datas,
+              strip=False, upx=False, name='DeepLiveCam'
+          )
+          SPECEOF
+          pyinstaller deep-live-cam.spec --noconfirm
+
+      - name: Create release archive
+        shell: bash
+        run: |
+          cd upstream/dist
+          cp ../ffmpeg/ffmpeg.exe DeepLiveCam/
+          cp ../ffmpeg/ffprobe.exe DeepLiveCam/
+          cat > DeepLiveCam/DeepLiveCam.bat << BATEOF
+          @echo off
+          set PATH=%~dp0;%PATH%
+          start "" "%~dp0DeepLiveCam.exe" --execution-provider ${{ matrix.provider }} %*
+          BATEOF
+          cat > DeepLiveCam/DeepLiveCam-cpu.bat << 'BATEOF'
+          @echo off
+          set PATH=%~dp0;%PATH%
+          start "" "%~dp0DeepLiveCam.exe" --execution-provider cpu %*
+          BATEOF
+          7z a -mx9 ../../${{ matrix.zip }} DeepLiveCam/
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.zip }}
+          path: ${{ matrix.zip }}
+
+  release:
+    needs: [check, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all builds
+        uses: actions/download-artifact@v4
+
+      - name: Create release notes
+        shell: bash
+        run: |
+          cat > release-notes.md << 'NOTES'
+          Built from [hacksider/Deep-Live-Cam](https://github.com/hacksider/Deep-Live-Cam) @ [`${{ needs.check.outputs.short_sha }}`](https://github.com/hacksider/Deep-Live-Cam/commit/${{ needs.check.outputs.upstream_sha }})
+
+          ### Which build should I download?
+
+          | Build | GPU | Recommended for |
+          |-------|-----|-----------------|
+          | **directml** | Any GPU (NVIDIA / AMD / Intel) | Most users |
+          | **cuda** | NVIDIA only | Best performance on NVIDIA |
+          | **openvino** | Intel only | Best performance on Intel |
+
+          > Not sure? Go with **directml**.
+
+          Every build includes a `DeepLiveCam-cpu.bat` fallback if your GPU isn't working.
+
+          ### Usage
+
+          Extract the zip, run `DeepLiveCam.bat`, and you're good to go.
+          NOTES
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ needs.check.outputs.tag }}" \
+            DeepLiveCam-windows-directml.zip/DeepLiveCam-windows-directml.zip \
+            DeepLiveCam-windows-cuda.zip/DeepLiveCam-windows-cuda.zip \
+            DeepLiveCam-windows-openvino.zip/DeepLiveCam-windows-openvino.zip \
+            --repo ${{ github.repository }} \
+            --title "Deep-Live-Cam ${{ needs.check.outputs.date }} (${{ needs.check.outputs.short_sha }})" \
+            --notes-file release-notes.md
