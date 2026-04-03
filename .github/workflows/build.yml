@@ -104,9 +104,14 @@ jobs:
           cp ffmpeg_tmp/ffmpeg-*/bin/ffmpeg.exe upstream/ffmpeg/
           cp ffmpeg_tmp/ffmpeg-*/bin/ffprobe.exe upstream/ffmpeg/
 
-      - name: Install FFmpeg (macOS)
+      - name: Download FFmpeg (macOS)
         if: runner.os == 'macOS'
-        run: brew install ffmpeg
+        shell: bash
+        run: |
+          curl -L -o ffmpeg.zip "https://evermeet.cx/ffmpeg/getrelease/zip"
+          unzip ffmpeg.zip -d upstream/ffmpeg
+          curl -L -o ffprobe.zip "https://evermeet.cx/ffmpeg/getrelease/ffprobe/zip"
+          unzip ffprobe.zip -d upstream/ffmpeg
 
       - name: Build with PyInstaller
         shell: bash
@@ -197,6 +202,8 @@ jobs:
         shell: bash
         run: |
           cd upstream/dist
+          cp ../ffmpeg/ffmpeg DeepLiveCam/
+          cp ../ffmpeg/ffprobe DeepLiveCam/
           cat > DeepLiveCam/DeepLiveCam.command << 'SHEOF'
           #!/bin/bash
           DIR="$(cd "$(dirname "$0")" && pwd)"
