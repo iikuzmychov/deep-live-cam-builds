@@ -186,7 +186,7 @@ jobs:
           set PATH=%~dp0;%PATH%
           start "" "%~dp0DeepLiveCam.exe" --execution-provider cpu %*
           BATEOF
-          7z a -mx9 ../../${{ matrix.zip }} DeepLiveCam/
+          7z a -mx1 ../../${{ matrix.zip }} DeepLiveCam/
 
       - name: Upload build
         uses: actions/upload-artifact@v4
