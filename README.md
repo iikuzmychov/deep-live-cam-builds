@@ -1,3 +1,5 @@
+> This is an **unofficial** community project. Not affiliated with the Deep-Live-Cam developers.
+
 # Deep-Live-Cam Builds
 
 Portable builds of [Deep-Live-Cam](https://github.com/hacksider/Deep-Live-Cam) — real-time face swap and video deepfake tool.
