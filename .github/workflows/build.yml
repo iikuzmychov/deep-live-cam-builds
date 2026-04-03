@@ -205,8 +205,6 @@ jobs:
 
           > Not sure? Go with **directml**.
 
-          Every build includes a `DeepLiveCam-cpu.bat` fallback if your GPU isn't working.
-
           ### Usage
 
           Extract the zip, run `DeepLiveCam.bat`, and you're good to go.
