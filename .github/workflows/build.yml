@@ -15,7 +15,7 @@ jobs:
       skip: ${{ steps.check.outputs.skip }}
       upstream_sha: ${{ steps.check.outputs.upstream_sha }}
       short_sha: ${{ steps.check.outputs.short_sha }}
-      date: ${{ steps.check.outputs.date }}
+      datetime: ${{ steps.check.outputs.datetime }}
       tag: ${{ steps.check.outputs.tag }}
     steps:
       - name: Check for new upstream release
@@ -42,20 +42,27 @@ jobs:
   build:
     needs: check
     if: needs.check.outputs.skip == 'false'
-    runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: directml
+            os: windows-latest
             onnxruntime: onnxruntime-directml
             provider: dml
           - name: cuda
+            os: windows-latest
             onnxruntime: onnxruntime-gpu
             provider: cuda
           - name: openvino
+            os: windows-latest
             onnxruntime: onnxruntime-openvino
             provider: openvino
+          - name: coreml
+            os: macos-latest
+            onnxruntime: onnxruntime-silicon
+            provider: coreml
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Clone upstream
@@ -75,7 +82,7 @@ jobs:
           cd upstream
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip uninstall -y torch torchvision torchaudio onnxruntime onnxruntime-gpu 2>/dev/null || true
+          pip uninstall -y torch torchvision torchaudio onnxruntime onnxruntime-gpu onnxruntime-silicon 2>/dev/null || true
           pip install ${{ matrix.onnxruntime }}
           pip install pyinstaller
 
@@ -87,7 +94,8 @@ jobs:
           cp models/inswapper_128_fp16.onnx models/inswapper_128.onnx
           curl -L -o models/GFPGANv1.4.pth "https://github.com/TencentARC/GFPGAN/releases/download/v1.3.4/GFPGANv1.4.pth"
 
-      - name: Download FFmpeg
+      - name: Download FFmpeg (Windows)
+        if: runner.os == 'Windows'
         shell: bash
         run: |
           curl -L -o ffmpeg.zip "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
@@ -96,12 +104,17 @@ jobs:
           cp ffmpeg_tmp/ffmpeg-*/bin/ffmpeg.exe upstream/ffmpeg/
           cp ffmpeg_tmp/ffmpeg-*/bin/ffprobe.exe upstream/ffmpeg/
 
+      - name: Install FFmpeg (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ffmpeg
+
       - name: Build with PyInstaller
         shell: bash
         run: |
           cd upstream
           cat > deep-live-cam.spec << 'SPECEOF'
           # -*- mode: python ; coding: utf-8 -*-
+          import sys
           from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs, collect_submodules
 
           datas = [
@@ -113,7 +126,8 @@ jobs:
           datas += collect_data_files('customtkinter')
           datas += collect_data_files('onnxruntime')
           datas += collect_data_files('insightface')
-          datas += collect_data_files('tensorflow')
+          if sys.platform != 'darwin':
+              datas += collect_data_files('tensorflow')
           datas += collect_data_files('opennsfw2')
 
           binaries = collect_dynamic_libs('onnxruntime')
@@ -124,12 +138,13 @@ jobs:
               'PIL', 'PIL.Image', 'cv2', 'numpy',
               'onnx', 'onnxruntime', 'onnxruntime.capi',
               'insightface', 'insightface.app', 'insightface.model_zoo',
-              'tensorflow', 'opennsfw2',
-              'pygrabber', 'pygrabber.dshow_graph',
+              'opennsfw2',
               'cv2_enumerate_cameras', 'psutil',
               'protobuf', 'google.protobuf',
               'scipy', 'sklearn', 'skimage', 'albumentations',
           ]
+          if sys.platform != 'darwin':
+              hiddenimports += ['tensorflow', 'pygrabber', 'pygrabber.dshow_graph']
           hiddenimports += collect_submodules('insightface')
           hiddenimports += collect_submodules('onnxruntime')
           hiddenimports += collect_submodules('modules')
@@ -158,7 +173,8 @@ jobs:
           SPECEOF
           pyinstaller deep-live-cam.spec --noconfirm
 
-      - name: Create release archive
+      - name: Create release archive (Windows)
+        if: runner.os == 'Windows'
         shell: bash
         run: |
           cd upstream/dist
@@ -176,11 +192,29 @@ jobs:
           BATEOF
           7z a -mx1 ../../DeepLiveCam-windows-${{ matrix.name }}.zip DeepLiveCam/
 
+      - name: Create release archive (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          cd upstream/dist
+          cat > DeepLiveCam/DeepLiveCam.command << 'SHEOF'
+          #!/bin/bash
+          DIR="$(cd "$(dirname "$0")" && pwd)"
+          "$DIR/DeepLiveCam" --execution-provider coreml "$@"
+          SHEOF
+          cat > DeepLiveCam/DeepLiveCam-cpu.command << 'SHEOF'
+          #!/bin/bash
+          DIR="$(cd "$(dirname "$0")" && pwd)"
+          "$DIR/DeepLiveCam" --execution-provider cpu "$@"
+          SHEOF
+          chmod +x DeepLiveCam/DeepLiveCam.command DeepLiveCam/DeepLiveCam-cpu.command DeepLiveCam/DeepLiveCam
+          cd DeepLiveCam && zip -r ../../../DeepLiveCam-macos-coreml.zip . && cd ..
+
       - name: Upload build
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}
-          path: DeepLiveCam-windows-${{ matrix.name }}.zip
+          path: DeepLiveCam-*-${{ matrix.name }}.zip
 
   release:
     needs: [check, build]
@@ -197,17 +231,22 @@ jobs:
 
           ### Which build should I download?
 
-          | Build | GPU | Recommended for |
-          |-------|-----|-----------------|
-          | **directml** | Any GPU (NVIDIA / AMD / Intel) | Most users |
-          | **cuda** | NVIDIA only | Best performance on NVIDIA |
-          | **openvino** | Intel only | Best performance on Intel |
+          | Platform | Build | GPU | Recommended for |
+          |----------|-------|-----|-----------------|
+          | Windows | **directml** | Any GPU (NVIDIA / AMD / Intel) | Most Windows users |
+          | Windows | **cuda** | NVIDIA only | Best performance on NVIDIA |
+          | Windows | **openvino** | Intel only | Best performance on Intel |
+          | macOS | **coreml** | Apple Silicon | Mac M1+ users |
 
-          > Not sure? Go with **directml**.
+          > **Windows** — not sure? Go with **directml**.
+
+          Every build includes a CPU fallback script if your GPU isn't working.
 
           ### Usage
 
-          Extract the zip, run `DeepLiveCam.bat`, and you're good to go.
+          **Windows:** Extract the zip, run `DeepLiveCam.bat` (or `DeepLiveCam-cpu.bat` for CPU fallback).
+
+          **macOS:** Extract the zip, double-click `DeepLiveCam.command` (or ``DeepLiveCam-cpu.command` for CPU fallback).
           NOTES
 
       - name: Create GitHub Release
@@ -218,6 +257,7 @@ jobs:
             directml/DeepLiveCam-windows-directml.zip \
             cuda/DeepLiveCam-windows-cuda.zip \
             openvino/DeepLiveCam-windows-openvino.zip \
+            coreml/DeepLiveCam-macos-coreml.zip \
             --repo ${{ github.repository }} \
             --title "Deep-Live-Cam ${{ needs.check.outputs.datetime }} (${{ needs.check.outputs.short_sha }})" \
             --notes-file release-notes.md
