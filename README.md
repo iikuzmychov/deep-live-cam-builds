@@ -21,23 +21,27 @@ Go to [Releases](../../releases/latest) and grab the right build for your setup:
 
 > **Windows** — not sure which one to pick? Go with **directml**.
 
-Every build includes a CPU fallback script if your GPU isn't working.
+Every build includes a CPU fallback script if your GPU isn't working. CPU mode is **much slower** but works on any machine.
 
 ## Usage
 
 ### Windows
 
 1. Extract the zip
-2. Run `DeepLiveCam.bat` (GPU) or `DeepLiveCam-cpu.bat` (CPU fallback)
+2. Run `DeepLiveCam.bat`
 3. Select a source face and click Live
 
-Close the console window to quit — the X button on the app window doesn't always work.
+> To use CPU fallback, run `DeepLiveCam-cpu.bat` instead.
+
+> **Close the console window to quit** — the X button on the app window doesn't always work.
 
 ### macOS
 
 1. Extract the zip
-2. Run `DeepLiveCam.command` (CoreML) or `DeepLiveCam-cpu.command` (CPU fallback)
+2. Right-click `DeepLiveCam.command` and select **Open** (macOS blocks unsigned apps on first launch)
 3. Select a source face and click Live
+
+> To use CPU fallback, run `DeepLiveCam-cpu.command` instead.
 
 ## Virtual camera (OBS)
 
