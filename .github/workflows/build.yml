@@ -196,6 +196,7 @@ jobs:
           hiddenimports += collect_submodules('onnxruntime')
           hiddenimports += collect_submodules('modules')
           hiddenimports += collect_submodules('modules.processors')
+          hiddenimports += collect_submodules('modules.processors.frame')
 
           a = Analysis(
               ['run.py'],
