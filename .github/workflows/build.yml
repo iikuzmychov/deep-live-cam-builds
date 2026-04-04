@@ -84,9 +84,6 @@ jobs:
           pip install -r requirements.txt
           pip uninstall -y torch torchvision torchaudio onnxruntime onnxruntime-gpu onnxruntime-silicon 2>/dev/null || true
           pip install ${{ matrix.onnxruntime }}
-          if [ "${{ matrix.name }}" = "cuda" ]; then
-            pip install nvidia-cublas-cu12 nvidia-cudnn-cu12 nvidia-cuda-runtime-cu12 nvidia-cufft-cu12 nvidia-curand-cu12 nvidia-cusolver-cu12 nvidia-cusparse-cu12 nvidia-nvjitlink-cu12
-          fi
           pip install pyinstaller
 
       - name: Download models
@@ -141,18 +138,6 @@ jobs:
           binaries = collect_dynamic_libs('onnxruntime')
           binaries += collect_dynamic_libs('cv2')
 
-          # Bundle CUDA runtime libraries for CUDA builds
-          cuda_packages = [
-              'nvidia.cublas', 'nvidia.cudnn', 'nvidia.cuda_runtime',
-              'nvidia.cufft', 'nvidia.curand', 'nvidia.cusolver',
-              'nvidia.cusparse', 'nvidia.nvjitlink',
-          ]
-          for pkg in cuda_packages:
-              try:
-                  binaries += collect_dynamic_libs(pkg)
-              except Exception:
-                  pass
-
           hiddenimports = [
               'tkinter', 'tkinter_fix', 'customtkinter',
               'PIL', 'PIL.Image', 'cv2', 'numpy',
@@ -200,11 +185,39 @@ jobs:
           cd upstream/dist
           cp ../ffmpeg/ffmpeg.exe DeepLiveCam/
           cp ../ffmpeg/ffprobe.exe DeepLiveCam/
-          cat > DeepLiveCam/DeepLiveCam.bat << BATEOF
+          if [ "${{ matrix.name }}" = "cuda" ]; then
+            cat > DeepLiveCam/DeepLiveCam.bat << 'BATEOF'
+          @echo off
+          set "CUDA_DIR="
+          for /d %%D in ("C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.*") do set "CUDA_DIR=%%D"
+          if not defined CUDA_DIR (
+            echo [ERROR] CUDA 12 is not installed.
+            echo Download it from: https://developer.nvidia.com/cuda-12-6-0-download-archive
+            echo.
+            pause
+            exit /b 1
+          )
+          set "CUDNN_DIR="
+          for /d %%D in ("C:\Program Files\NVIDIA\CUDNN\v9.*") do set "CUDNN_DIR=%%D"
+          if not defined CUDNN_DIR (
+            echo [ERROR] cuDNN 9 is not installed.
+            echo Download it from: https://developer.nvidia.com/cudnn-downloads
+            echo.
+            pause
+            exit /b 1
+          )
+          for /d %%A in ("%CUDNN_DIR%\bin\12.*") do for /d %%X in ("%%A\*") do set "CUDNN_BIN=%%X"
+          set PATH=%CUDA_DIR%\bin;%CUDNN_BIN%;%~dp0;%PATH%
+          "%~dp0DeepLiveCam.exe" --execution-provider cuda %*
+          pause
+          BATEOF
+          else
+            cat > DeepLiveCam/DeepLiveCam.bat << BATEOF
           @echo off
           set PATH=%~dp0;%PATH%
           start "" "%~dp0DeepLiveCam.exe" --execution-provider ${{ matrix.provider }} %*
           BATEOF
+          fi
           7z a -mx1 ../../DeepLiveCam-windows-${{ matrix.name }}.zip DeepLiveCam/
 
       - name: Create release archive (macOS)
@@ -243,14 +256,14 @@ jobs:
 
           ### Which build should I download?
 
-          | Platform | Build | GPU | Recommended for |
-          |----------|-------|-----|-----------------|
-          | Windows | **directml** | Any GPU (NVIDIA / AMD / Intel) | Most Windows users |
-          | Windows | **cuda** | NVIDIA only | Best performance on NVIDIA |
-          | Windows | **openvino** | Intel only | Best performance on Intel |
-          | macOS | **coreml** | Apple Silicon | Mac M1+ users |
+          | Platform | Build | GPU | Dependencies | Recommended for |
+          |----------|-------|-----|--------------|-----------------|
+          | Windows | **directml** | Any GPU (NVIDIA / AMD / Intel) | None | Most Windows users |
+          | Windows | **cuda** | NVIDIA RTX 2000+ | [CUDA 12](https://developer.nvidia.com/cuda-12-6-0-download-archive) + [cuDNN 9](https://developer.nvidia.com/cudnn-downloads) | Best performance on modern NVIDIA |
+          | Windows | **openvino** | Intel only | None | Best performance on Intel |
+          | macOS | **coreml** | Apple Silicon | None | Mac M1+ users |
 
-          > **Windows** — not sure? Go with **directml**.
+          > **Windows** — not sure? Go with **directml**. It works on any GPU with no extra setup.
 
           If your GPU isn't supported or unavailable, the app automatically falls back to CPU.
 

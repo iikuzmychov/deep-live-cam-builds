@@ -14,14 +14,16 @@ Portable builds of [Deep-Live-Cam](https://github.com/hacksider/Deep-Live-Cam) �
 
 Go to [Releases](../../releases/latest) and grab the right build for your setup:
 
-| Platform | Build | GPU | Recommended for |
-|----------|-------|-----|-----------------|
-| Windows | **directml** | Any GPU (NVIDIA / AMD / Intel) | Most Windows users |
-| Windows | **cuda** | NVIDIA only | Best performance on NVIDIA |
-| Windows | **openvino** | Intel only | Best performance on Intel |
-| macOS | **coreml** | Apple Silicon | Mac M1+ users |
+| Platform | Build | GPU | Dependencies | Recommended for |
+|----------|-------|-----|--------------|-----------------|
+| Windows | **directml** | Any GPU (NVIDIA / AMD / Intel) | None | Most Windows users |
+| Windows | **cuda** | NVIDIA RTX 2000+ | [CUDA 12](https://developer.nvidia.com/cuda-12-9-1-download-archive) + [cuDNN 9](https://developer.nvidia.com/cudnn-downloads) | Best performance on modern NVIDIA |
+| Windows | **openvino** | Intel only | None | Best performance on Intel |
+| macOS | **coreml** | Apple Silicon | None | Mac M1+ users |
 
-> **Windows** — not sure which one to pick? Go with **directml**.
+> **Windows** — not sure which one to pick? Go with **directml**. It works on any GPU with no extra setup.
+
+> **CUDA note:** The CUDA build requires RTX 2000 series or newer (GTX 16-series and older may produce visual artifacts due to limited fp16 support). You must install CUDA 12 and cuDNN 9 separately — the launcher will check for them on startup.
 
 If your GPU isn't supported or unavailable, the app automatically falls back to CPU. CPU mode is **much slower** but works on any machine.
 
