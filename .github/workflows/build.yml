@@ -92,7 +92,9 @@ jobs:
           cd upstream
           curl -L -o models/inswapper_128_fp16.onnx "https://huggingface.co/hacksider/deep-live-cam/resolve/main/inswapper_128_fp16.onnx?download=true"
           cp models/inswapper_128_fp16.onnx models/inswapper_128.onnx
-          curl -L -o models/GFPGANv1.4.pth "https://github.com/TencentARC/GFPGAN/releases/download/v1.3.4/GFPGANv1.4.pth"
+          curl -L -o models/gfpgan-1024.onnx "https://huggingface.co/hacksider/deep-live-cam/resolve/main/gfpgan-1024.onnx?download=true"
+          curl -L -o models/GPEN-BFR-256.onnx "https://huggingface.co/hacksider/deep-live-cam/resolve/main/GPEN-BFR-256.onnx?download=true"
+          curl -L -o models/GPEN-BFR-512.onnx "https://huggingface.co/hacksider/deep-live-cam/resolve/main/GPEN-BFR-512.onnx?download=true"
 
       - name: Download FFmpeg (Windows)
         if: runner.os == 'Windows'
