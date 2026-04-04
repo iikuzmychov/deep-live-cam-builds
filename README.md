@@ -1,5 +1,7 @@
 > This is an **unofficial** community project. Not affiliated with the Deep-Live-Cam developers.
 
+> **Disclaimer:** This software can swap faces in real time. If using a real person's face, get their consent and label any output as a deepfake when sharing. You are responsible for how you use it. See the [upstream disclaimer](https://github.com/hacksider/Deep-Live-Cam#disclaimer) for full terms.
+
 # Deep-Live-Cam Builds
 
 Portable builds of [Deep-Live-Cam](https://github.com/hacksider/Deep-Live-Cam) — real-time face swap and video deepfake tool.
