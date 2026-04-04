@@ -242,6 +242,7 @@ jobs:
         with:
           name: ${{ matrix.name }}
           path: DeepLiveCam-*-${{ matrix.name }}.zip
+          retention-days: 1
 
   release:
     needs: [check, build]
