@@ -251,9 +251,9 @@ jobs:
 
           ### Usage
 
-          **Windows:** Extract the zip, run `DeepLiveCam.bat` (or `DeepLiveCam-cpu.bat` for CPU fallback).
+          **Windows:** Extract the zip, run `DeepLiveCam.bat`.
 
-          **macOS:** Extract the zip, double-click `DeepLiveCam.command` (or ``DeepLiveCam-cpu.command` for CPU fallback).
+          **macOS:** Extract the zip, run `DeepLiveCam.command`.
           NOTES
 
       - name: Create GitHub Release
