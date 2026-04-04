@@ -204,17 +204,14 @@ jobs:
           hiddenimports += collect_submodules('insightface')
           hiddenimports += collect_submodules('onnxruntime')
           # collect_submodules doesn't work for local source packages,
-          # so we discover them manually at spec generation time
-          import pkgutil, importlib
-          for pkg_path in ['modules', 'modules.processors', 'modules.processors.frame']:
-              try:
-                  pkg = importlib.import_module(pkg_path)
-                  for importer, modname, ispkg in pkgutil.walk_packages(pkg.__path__, pkg.__name__ + '.'):
-                      hiddenimports.append(modname)
-              except Exception as e:
-                  print(f"Warning: could not collect {pkg_path}: {e}")
-          # Print what we found for debugging
-          print("Collected hiddenimports for modules.*:")
+          # so we discover them by scanning .py files on disk
+          import glob as _glob
+          for py_file in _glob.glob('modules/**/*.py', recursive=True):
+              mod = py_file.replace('\\', '/').replace('/', '.').removesuffix('.py')
+              if mod.endswith('.__init__'):
+                  mod = mod.removesuffix('.__init__')
+              hiddenimports.append(mod)
+          print("Collected local modules:")
           for h in sorted(set(h for h in hiddenimports if h.startswith('modules'))):
               print(f"  {h}")
 
