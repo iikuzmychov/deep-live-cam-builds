@@ -109,6 +109,12 @@ jobs:
         shell: bash
         run: git clone https://github.com/hacksider/Deep-Live-Cam.git upstream
 
+      - name: Patch upstream for PyInstaller compatibility
+        shell: bash
+        run: |
+          cd upstream
+          sed -i 's/if to_quit: quit()/if to_quit: sys.exit()/' modules/core.py
+
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:

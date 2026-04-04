@@ -35,7 +35,6 @@ If your GPU isn't supported or unavailable, the app automatically falls back to 
 2. Run `DeepLiveCam.bat`
 3. Select a source face and click Live
 
-> **Close the console window to quit** — the X button on the app window doesn't always work.
 
 ### macOS
 
