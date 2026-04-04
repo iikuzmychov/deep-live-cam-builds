@@ -31,7 +31,10 @@ jobs:
           echo "datetime=${DATETIME}" >> "$GITHUB_OUTPUT"
           echo "tag=build-${SHORT_SHA}-${DATETIME}" >> "$GITHUB_OUTPUT"
 
-          if gh release list --repo ${{ github.repository }} --json tagName -q '.[].tagName' | grep -q "$SHORT_SHA"; then
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "Manual trigger, forcing build."
+          elif gh release list --repo ${{ github.repository }} --json tagName -q '.[].tagName' | grep -q "$SHORT_SHA"; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
             echo "Release for $SHORT_SHA already exists, skipping."
           else
