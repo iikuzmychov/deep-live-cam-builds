@@ -84,6 +84,9 @@ jobs:
           pip install -r requirements.txt
           pip uninstall -y torch torchvision torchaudio onnxruntime onnxruntime-gpu onnxruntime-silicon 2>/dev/null || true
           pip install ${{ matrix.onnxruntime }}
+          if [ "${{ matrix.name }}" = "cuda" ]; then
+            pip install nvidia-cublas-cu12 nvidia-cudnn-cu12 nvidia-cuda-runtime-cu12 nvidia-cufft-cu12 nvidia-curand-cu12 nvidia-cusolver-cu12 nvidia-cusparse-cu12 nvidia-nvjitlink-cu12
+          fi
           pip install pyinstaller
 
       - name: Download models
@@ -137,6 +140,18 @@ jobs:
 
           binaries = collect_dynamic_libs('onnxruntime')
           binaries += collect_dynamic_libs('cv2')
+
+          # Bundle CUDA runtime libraries for CUDA builds
+          cuda_packages = [
+              'nvidia.cublas', 'nvidia.cudnn', 'nvidia.cuda_runtime',
+              'nvidia.cufft', 'nvidia.curand', 'nvidia.cusolver',
+              'nvidia.cusparse', 'nvidia.nvjitlink',
+          ]
+          for pkg in cuda_packages:
+              try:
+                  binaries += collect_dynamic_libs(pkg)
+              except Exception:
+                  pass
 
           hiddenimports = [
               'tkinter', 'tkinter_fix', 'customtkinter',
