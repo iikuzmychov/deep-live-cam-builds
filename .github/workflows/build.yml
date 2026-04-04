@@ -39,8 +39,48 @@ jobs:
             echo "No release for $SHORT_SHA, building."
           fi
 
-  build:
+  create-release:
     needs: check
+    if: needs.check.outputs.skip == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create release notes
+        shell: bash
+        run: |
+          cat > release-notes.md << 'NOTES'
+          Built from [hacksider/Deep-Live-Cam](https://github.com/hacksider/Deep-Live-Cam) @ [`${{ needs.check.outputs.short_sha }}`](https://github.com/hacksider/Deep-Live-Cam/commit/${{ needs.check.outputs.upstream_sha }})
+
+          ### Which build should I download?
+
+          | Platform | Build | GPU | Dependencies | Recommended for |
+          |----------|-------|-----|--------------|-----------------|
+          | Windows | **directml** | Any GPU (NVIDIA / AMD / Intel) | None | Most Windows users |
+          | Windows | **cuda** | NVIDIA RTX 2000+ | [CUDA 12](https://developer.nvidia.com/cuda-12-6-0-download-archive) + [cuDNN 9](https://developer.nvidia.com/cudnn-downloads) | Best performance on modern NVIDIA |
+          | Windows | **openvino** | Intel only | None | Best performance on Intel |
+          | macOS | **coreml** | Apple Silicon | None | Mac M1+ users |
+
+          > **Windows** — not sure? Go with **directml**. It works on any GPU with no extra setup.
+
+          If your GPU isn't supported or unavailable, the app automatically falls back to CPU.
+
+          ### Usage
+
+          **Windows:** Extract the zip, run `DeepLiveCam.bat`.
+
+          **macOS:** Extract the zip, run `DeepLiveCam.command`.
+          NOTES
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ needs.check.outputs.tag }}" \
+            --repo ${{ github.repository }} \
+            --title "Deep-Live-Cam ${{ needs.check.outputs.datetime }} (${{ needs.check.outputs.short_sha }})" \
+            --notes-file release-notes.md
+
+  build:
+    needs: [check, create-release]
     if: needs.check.outputs.skip == 'false'
     strategy:
       fail-fast: false
@@ -237,55 +277,11 @@ jobs:
           chmod +x DeepLiveCam/DeepLiveCam.command DeepLiveCam/DeepLiveCam
           cd DeepLiveCam && zip -r ../../../DeepLiveCam-macos-coreml.zip . && cd ..
 
-      - name: Upload build
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.name }}
-          path: DeepLiveCam-*-${{ matrix.name }}.zip
-          retention-days: 1
-
-  release:
-    needs: [check, build]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download all builds
-        uses: actions/download-artifact@v4
-
-      - name: Create release notes
-        shell: bash
-        run: |
-          cat > release-notes.md << 'NOTES'
-          Built from [hacksider/Deep-Live-Cam](https://github.com/hacksider/Deep-Live-Cam) @ [`${{ needs.check.outputs.short_sha }}`](https://github.com/hacksider/Deep-Live-Cam/commit/${{ needs.check.outputs.upstream_sha }})
-
-          ### Which build should I download?
-
-          | Platform | Build | GPU | Dependencies | Recommended for |
-          |----------|-------|-----|--------------|-----------------|
-          | Windows | **directml** | Any GPU (NVIDIA / AMD / Intel) | None | Most Windows users |
-          | Windows | **cuda** | NVIDIA RTX 2000+ | [CUDA 12](https://developer.nvidia.com/cuda-12-6-0-download-archive) + [cuDNN 9](https://developer.nvidia.com/cudnn-downloads) | Best performance on modern NVIDIA |
-          | Windows | **openvino** | Intel only | None | Best performance on Intel |
-          | macOS | **coreml** | Apple Silicon | None | Mac M1+ users |
-
-          > **Windows** — not sure? Go with **directml**. It works on any GPU with no extra setup.
-
-          If your GPU isn't supported or unavailable, the app automatically falls back to CPU.
-
-          ### Usage
-
-          **Windows:** Extract the zip, run `DeepLiveCam.bat`.
-
-          **macOS:** Extract the zip, run `DeepLiveCam.command`.
-          NOTES
-
-      - name: Create GitHub Release
+      - name: Upload to release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
         run: |
-          gh release create "${{ needs.check.outputs.tag }}" \
-            directml/DeepLiveCam-windows-directml.zip \
-            cuda/DeepLiveCam-windows-cuda.zip \
-            openvino/DeepLiveCam-windows-openvino.zip \
-            coreml/DeepLiveCam-macos-coreml.zip \
-            --repo ${{ github.repository }} \
-            --title "Deep-Live-Cam ${{ needs.check.outputs.datetime }} (${{ needs.check.outputs.short_sha }})" \
-            --notes-file release-notes.md
+          gh release upload "${{ needs.check.outputs.tag }}" \
+            DeepLiveCam-*-${{ matrix.name }}.zip \
+            --repo ${{ github.repository }}
