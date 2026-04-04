@@ -203,9 +203,20 @@ jobs:
               hiddenimports += ['tensorflow', 'pygrabber', 'pygrabber.dshow_graph']
           hiddenimports += collect_submodules('insightface')
           hiddenimports += collect_submodules('onnxruntime')
-          hiddenimports += collect_submodules('modules')
-          hiddenimports += collect_submodules('modules.processors')
-          hiddenimports += collect_submodules('modules.processors.frame')
+          # collect_submodules doesn't work for local source packages,
+          # so we discover them manually at spec generation time
+          import pkgutil, importlib
+          for pkg_path in ['modules', 'modules.processors', 'modules.processors.frame']:
+              try:
+                  pkg = importlib.import_module(pkg_path)
+                  for importer, modname, ispkg in pkgutil.walk_packages(pkg.__path__, pkg.__name__ + '.'):
+                      hiddenimports.append(modname)
+              except Exception as e:
+                  print(f"Warning: could not collect {pkg_path}: {e}")
+          # Print what we found for debugging
+          print("Collected hiddenimports for modules.*:")
+          for h in sorted(set(h for h in hiddenimports if h.startswith('modules'))):
+              print(f"  {h}")
 
           a = Analysis(
               ['run.py'],
