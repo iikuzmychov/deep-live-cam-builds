@@ -116,7 +116,11 @@ jobs:
         shell: bash
         run: |
           cd upstream
-          sed -i 's/if to_quit: quit()/if to_quit: sys.exit()/' modules/core.py
+          python -c "
+          import pathlib
+          p = pathlib.Path('modules/core.py')
+          p.write_text(p.read_text().replace('if to_quit: quit()', 'if to_quit: sys.exit()'))
+          "
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
