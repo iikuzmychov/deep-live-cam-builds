@@ -190,11 +190,6 @@ jobs:
           set PATH=%~dp0;%PATH%
           start "" "%~dp0DeepLiveCam.exe" --execution-provider ${{ matrix.provider }} %*
           BATEOF
-          cat > DeepLiveCam/DeepLiveCam-cpu.bat << 'BATEOF'
-          @echo off
-          set PATH=%~dp0;%PATH%
-          start "" "%~dp0DeepLiveCam.exe" --execution-provider cpu %*
-          BATEOF
           7z a -mx1 ../../DeepLiveCam-windows-${{ matrix.name }}.zip DeepLiveCam/
 
       - name: Create release archive (macOS)
@@ -209,12 +204,7 @@ jobs:
           DIR="$(cd "$(dirname "$0")" && pwd)"
           "$DIR/DeepLiveCam" --execution-provider coreml "$@"
           SHEOF
-          cat > DeepLiveCam/DeepLiveCam-cpu.command << 'SHEOF'
-          #!/bin/bash
-          DIR="$(cd "$(dirname "$0")" && pwd)"
-          "$DIR/DeepLiveCam" --execution-provider cpu "$@"
-          SHEOF
-          chmod +x DeepLiveCam/DeepLiveCam.command DeepLiveCam/DeepLiveCam-cpu.command DeepLiveCam/DeepLiveCam
+          chmod +x DeepLiveCam/DeepLiveCam.command DeepLiveCam/DeepLiveCam
           cd DeepLiveCam && zip -r ../../../DeepLiveCam-macos-coreml.zip . && cd ..
 
       - name: Upload build
@@ -247,7 +237,7 @@ jobs:
 
           > **Windows** — not sure? Go with **directml**.
 
-          Every build includes a CPU fallback script if your GPU isn't working.
+          If your GPU isn't supported or unavailable, the app automatically falls back to CPU.
 
           ### Usage
 
