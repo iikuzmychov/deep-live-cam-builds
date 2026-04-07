@@ -39,8 +39,9 @@ If your GPU isn't supported or unavailable, the app automatically falls back to 
 ### macOS
 
 1. Extract the zip
-2. Right-click `DeepLiveCam.command` and select **Open** (macOS blocks unsigned apps on first launch)
+2. Double-click `DeepLiveCam.command` — macOS will block it the first time. Go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway**
 3. Select a source face and click Live
+4. The first time you click **Live**, macOS will ask for camera access. Approve it, then click **Live** again.
 
 ## Virtual camera (OBS)
 

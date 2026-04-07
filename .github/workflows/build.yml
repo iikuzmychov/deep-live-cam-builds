@@ -70,7 +70,9 @@ jobs:
 
           **Windows:** Extract the zip, run `DeepLiveCam.bat`.
 
-          **macOS:** Extract the zip, run `DeepLiveCam.command`.
+          **macOS:** Extract the zip, double-click `DeepLiveCam.command` — macOS will block it the first time. Go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway**.
+
+          > **Note:** The first time you click **Live**, macOS will ask for camera access. Approve it, then click **Live** again.
           NOTES
 
       - name: Create GitHub Release
@@ -117,10 +119,35 @@ jobs:
         run: |
           cd upstream
           python -c "
-          import pathlib
+          import pathlib, sys
           p = pathlib.Path('modules/core.py')
-          p.write_text(p.read_text().replace('if to_quit: quit()', 'if to_quit: sys.exit()'))
+          text = p.read_text()
+          text = text.replace('if to_quit: quit()', 'if to_quit: sys.exit()')
+          p.write_text(text)
           "
+
+      - name: Patch out tensorflow on macOS
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          cd upstream
+          python << 'PYEOF'
+          import pathlib, re
+          p = pathlib.Path('modules/core.py')
+          text = p.read_text()
+          # remove tensorflow import
+          text = text.replace('import tensorflow\n', '')
+          # guard tensorflow usage in limit_resources
+          text = text.replace(
+              '# prevent tensorflow memory leak\n'
+              '    gpus = tensorflow.config.experimental.list_physical_devices(\'GPU\')\n'
+              '    for gpu in gpus:\n'
+              '        tensorflow.config.experimental.set_memory_growth(gpu, True)',
+              '# tensorflow not available on macOS\n'
+              '    pass'
+          )
+          p.write_text(text)
+          PYEOF
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -135,7 +162,7 @@ jobs:
           cd upstream
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip uninstall -y torch torchvision torchaudio onnxruntime onnxruntime-gpu onnxruntime-silicon 2>/dev/null || true
+          pip uninstall -y torch torchvision torchaudio onnxruntime onnxruntime-gpu onnxruntime-silicon tensorflow 2>/dev/null || true
           pip install ${{ matrix.onnxruntime }}
           pip install pyinstaller
 
@@ -226,7 +253,8 @@ jobs:
               datas=datas,
               hiddenimports=hiddenimports,
               hookspath=[], hooksconfig={}, runtime_hooks=[],
-              excludes=[], win_no_prefer_redirects=False,
+              excludes=['tensorflow'] if sys.platform == 'darwin' else [],
+              win_no_prefer_redirects=False,
               win_private_assemblies=False, cipher=None, noarchive=False,
           )
           pyz = PYZ(a.pure, a.zipped_data, cipher=None)
@@ -294,6 +322,8 @@ jobs:
           cat > DeepLiveCam/DeepLiveCam.command << 'SHEOF'
           #!/bin/bash
           DIR="$(cd "$(dirname "$0")" && pwd)"
+          xattr -cr "$DIR"
+          export PATH="$DIR:$PATH"
           "$DIR/DeepLiveCam" --execution-provider coreml "$@"
           SHEOF
           chmod +x DeepLiveCam/DeepLiveCam.command DeepLiveCam/DeepLiveCam
