@@ -82,7 +82,8 @@ jobs:
           gh release create "${{ needs.check.outputs.tag }}" \
             --repo ${{ github.repository }} \
             --title "Deep-Live-Cam ${{ needs.check.outputs.datetime }} (${{ needs.check.outputs.short_sha }})" \
-            --notes-file release-notes.md
+            --notes-file release-notes.md \
+            --draft
 
   build:
     needs: [check, create-release]
@@ -337,3 +338,17 @@ jobs:
           gh release upload "${{ needs.check.outputs.tag }}" \
             DeepLiveCam-*-${{ matrix.name }}.zip \
             --repo ${{ github.repository }}
+
+  publish-release:
+    needs: [check, build]
+    if: needs.check.outputs.skip == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release edit "${{ needs.check.outputs.tag }}" \
+            --repo ${{ github.repository }} \
+            --draft=false \
+            --latest
