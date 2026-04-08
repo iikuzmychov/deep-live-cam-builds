@@ -163,7 +163,10 @@ jobs:
           cd upstream
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip uninstall -y torch torchvision torchaudio onnxruntime onnxruntime-gpu onnxruntime-silicon tensorflow 2>/dev/null || true
+          pip uninstall -y torch torchvision torchaudio onnxruntime onnxruntime-gpu onnxruntime-silicon 2>/dev/null || true
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            pip uninstall -y tensorflow 2>/dev/null || true
+          fi
           pip install ${{ matrix.onnxruntime }}
           pip install pyinstaller
 
