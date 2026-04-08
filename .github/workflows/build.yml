@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 6 * * 1'
   workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish the release after building'
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -344,7 +349,7 @@ jobs:
 
   publish-release:
     needs: [check, build]
-    if: needs.check.outputs.skip == 'false'
+    if: needs.check.outputs.skip == 'false' && (github.event_name != 'workflow_dispatch' || inputs.publish)
     runs-on: ubuntu-latest
     steps:
       - name: Publish release
