@@ -279,30 +279,6 @@ jobs:
           SPECEOF
           pyinstaller deep-live-cam.spec --noconfirm
 
-      - name: Smoke test
-        shell: bash
-        run: |
-          cd upstream/dist/DeepLiveCam
-          if [ "$RUNNER_OS" = "macOS" ]; then
-            brew install coreutils
-            TIMEOUT=gtimeout
-          else
-            TIMEOUT=timeout
-          fi
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            $TIMEOUT 90 ./DeepLiveCam.exe --execution-provider cpu || code=$?
-          else
-            $TIMEOUT 90 ./DeepLiveCam --execution-provider cpu || code=$?
-          fi
-          if [ "${code:-0}" -eq 124 ]; then
-            echo "Smoke test passed (app started and was killed after timeout)"
-          elif [ "${code:-0}" -eq 0 ]; then
-            echo "Smoke test passed (app exited cleanly)"
-          else
-            echo "Smoke test FAILED with exit code ${code}"
-            exit 1
-          fi
-
       - name: Create release archive (Windows)
         if: runner.os == 'Windows'
         shell: bash
@@ -361,6 +337,36 @@ jobs:
           SHEOF
           chmod +x DeepLiveCam/DeepLiveCam.command DeepLiveCam/DeepLiveCam
           cd DeepLiveCam && zip -r ../../../DeepLiveCam-macos-coreml.zip . && cd ..
+
+      - name: Smoke test (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          cd upstream/dist/DeepLiveCam
+          export PATH="$(pwd):$PATH"
+          timeout 90 ./DeepLiveCam.exe --execution-provider ${{ matrix.provider }} || code=$?
+          if [ "${code:-0}" -eq 124 ]; then
+            echo "Smoke test passed (app started and was killed after timeout)"
+          else
+            echo "Smoke test FAILED with exit code ${code}"
+            exit 1
+          fi
+
+      - name: Smoke test (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          cd upstream/dist/DeepLiveCam
+          brew install coreutils
+          xattr -cr .
+          export PATH="$(pwd):$PATH"
+          gtimeout 90 ./DeepLiveCam --execution-provider ${{ matrix.provider }} || code=$?
+          if [ "${code:-0}" -eq 124 ]; then
+            echo "Smoke test passed (app started and was killed after timeout)"
+          else
+            echo "Smoke test FAILED with exit code ${code}"
+            exit 1
+          fi
 
       - name: Upload to release
         env:
