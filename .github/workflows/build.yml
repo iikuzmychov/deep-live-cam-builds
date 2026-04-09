@@ -78,6 +78,8 @@ jobs:
           **macOS:** Extract the zip, double-click `DeepLiveCam.command` — macOS will block it the first time. Go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway**.
 
           > **Note:** The first time you click **Live**, macOS will ask for camera access. Approve it, then click **Live** again.
+          >
+          > The first launch on macOS can take around 2 minutes while `matplotlib` builds its cache. This is expected; later launches should be much faster.
           NOTES
 
       - name: Create GitHub Release

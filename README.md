@@ -42,6 +42,7 @@ If your GPU isn't supported or unavailable, the app automatically falls back to 
 2. Double-click `DeepLiveCam.command` — macOS will block it the first time. Go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway**
 3. Select a source face and click Live
 4. The first time you click **Live**, macOS will ask for camera access. Approve it, then click **Live** again.
+5. The first launch on macOS can take around 2 minutes while `matplotlib` builds its cache. This is expected; later launches should be much faster.
 
 ## Virtual camera (OBS)
 
