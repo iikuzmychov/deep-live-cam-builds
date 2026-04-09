@@ -173,6 +173,7 @@ jobs:
             pip uninstall -y tensorflow 2>/dev/null || true
           fi
           pip install ${{ matrix.onnxruntime }}
+          pip install --upgrade matplotlib
           pip install pyinstaller
 
       - name: Download models
