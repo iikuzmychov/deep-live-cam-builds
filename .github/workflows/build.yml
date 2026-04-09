@@ -345,7 +345,7 @@ jobs:
         run: |
           cd upstream/dist/DeepLiveCam
           export PATH="$(pwd):$PATH"
-          timeout 90 ./DeepLiveCam.exe --execution-provider ${{ matrix.provider }} || code=$?
+          timeout 30 ./DeepLiveCam.exe --execution-provider ${{ matrix.provider }} || code=$?
           if [ "${code:-0}" -eq 124 ]; then
             echo "Smoke test passed (app started and was killed after timeout)"
           else
@@ -361,7 +361,7 @@ jobs:
           brew install coreutils
           xattr -cr .
           export PATH="$(pwd):$PATH"
-          gtimeout 300 ./DeepLiveCam --execution-provider ${{ matrix.provider }} || code=$?
+          gtimeout 60 ./DeepLiveCam --execution-provider ${{ matrix.provider }} || code=$?
           if [ "${code:-0}" -eq 124 ]; then
             echo "Smoke test passed (app started and was killed after timeout)"
           else
