@@ -14,7 +14,7 @@ Portable builds of [Deep-Live-Cam](https://github.com/hacksider/Deep-Live-Cam) â
 
 Go to [Releases](../../releases/latest) and grab the right build for your setup:
 
-> Don't trust these binaries? Fork this repo and run the workflow yourself.
+> Don't trust our binaries? Fork this repo and run the workflow yourself.
 
 | Platform | Build | GPU | Dependencies | Recommended for |
 |----------|-------|-----|--------------|-----------------|
