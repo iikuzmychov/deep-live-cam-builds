@@ -57,4 +57,4 @@ To use Deep-Live-Cam in Google Meet, Discord, Zoom, or any other video call app,
 
 ## How builds work
 
-A [GitHub Actions workflow](.github/workflows/build.yml) runs weekly (Monday 6 AM UTC) and checks [upstream](https://github.com/hacksider/Deep-Live-Cam) for new commits. If anything changed, it builds all variants and publishes a new release.
+A [GitHub Actions workflow](.github/workflows/build.yml) checks [upstream](https://github.com/hacksider/Deep-Live-Cam) daily at 6 AM UTC for new commits. If anything changed, it builds all variants and publishes a new release.
