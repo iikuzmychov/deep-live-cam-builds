@@ -1,3 +1,5 @@
+[![Build Deep-Live-Cam](https://github.com/iikuzmychov/deep-live-cam-builds/actions/workflows/build.yml/badge.svg)](https://github.com/iikuzmychov/deep-live-cam-builds/actions/workflows/build.yml)
+
 > This is an **unofficial** community project. Not affiliated with the Deep-Live-Cam developers.
 
 > **Disclaimer:** This software can swap faces in real time. If using a real person's face, get their consent and label any output as a deepfake when sharing. You are responsible for how you use it. See the [upstream disclaimer](https://github.com/hacksider/Deep-Live-Cam#disclaimer) for full terms.
@@ -14,18 +16,14 @@ Portable builds of [Deep-Live-Cam](https://github.com/hacksider/Deep-Live-Cam) �
 
 Go to [Releases](../../releases/latest) and grab the right build for your setup:
 
-> Don't trust our binaries? Fork this repo and run the workflow yourself.
-
 | Platform | Build | GPU | Dependencies | Recommended for |
 |----------|-------|-----|--------------|-----------------|
-| Windows | **directml** | Any GPU (NVIDIA / AMD / Intel) | None | Most Windows users |
-| Windows | **cuda** | NVIDIA RTX 2000+ | [CUDA 12](https://developer.nvidia.com/cuda-12-9-1-download-archive) + [cuDNN 9](https://developer.nvidia.com/cudnn-downloads) | Best performance on modern NVIDIA |
-| Windows | **openvino** | Intel only | None | Best performance on Intel |
-| macOS | **coreml** | Apple Silicon | None | Mac M1+ users |
+| Windows | **directml** | Any GPU | None | Most Windows users |
+| Windows | **cuda** | NVIDIA RTX | [CUDA 12](https://developer.nvidia.com/cuda-12-9-1-download-archive) + [cuDNN 9](https://developer.nvidia.com/cudnn-downloads) | Best performance on modern NVIDIA |
+| Windows | **openvino** | Intel Arc | None | Best performance on modern Intel |
+| macOS | **coreml** | Apple Silicon | None | macOS users |
 
-> **Windows** — not sure which one to pick? Go with **directml**. It works on any GPU with no extra setup.
-
-> **CUDA note:** The CUDA build requires RTX 2000 series or newer (GTX 16-series and older may produce visual artifacts due to limited fp16 support). You must install CUDA 12 and cuDNN 9 separately — the launcher will check for them on startup.
+> **Don't trust our binaries?** Fork this repo and run the workflow yourself.
 
 If your GPU isn't supported or unavailable, the app automatically falls back to CPU. CPU mode is **much slower** but works on any machine.
 
