@@ -134,29 +134,6 @@ jobs:
           p.write_text(text)
           "
 
-      - name: Patch out tensorflow on macOS
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          cd upstream
-          python << 'PYEOF'
-          import pathlib, re
-          p = pathlib.Path('modules/core.py')
-          text = p.read_text()
-          # remove tensorflow import
-          text = text.replace('import tensorflow\n', '')
-          # guard tensorflow usage in limit_resources
-          text = text.replace(
-              '# prevent tensorflow memory leak\n'
-              '    gpus = tensorflow.config.experimental.list_physical_devices(\'GPU\')\n'
-              '    for gpu in gpus:\n'
-              '        tensorflow.config.experimental.set_memory_growth(gpu, True)',
-              '# tensorflow not available on macOS\n'
-              '    pass'
-          )
-          p.write_text(text)
-          PYEOF
-
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
