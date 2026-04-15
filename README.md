@@ -19,8 +19,8 @@ Go to [Releases](../../releases/latest) and grab the right build for your setup:
 | Platform | Build | GPU | Dependencies | Recommended for |
 |----------|-------|-----|--------------|-----------------|
 | Windows | **directml** | Any GPU | None | Most Windows users |
-| Windows | **cuda** | NVIDIA RTX | [CUDA 12](https://developer.nvidia.com/cuda-12-9-1-download-archive) + [cuDNN 9](https://developer.nvidia.com/cudnn-downloads) | Best performance on modern NVIDIA |
-| Windows | **openvino** | Intel Arc | None | Best performance on modern Intel |
+| Windows | **cuda** | NVIDIA | [CUDA 12](https://developer.nvidia.com/cuda-12-9-1-download-archive) + [cuDNN 9](https://developer.nvidia.com/cudnn-downloads) | Best performance on modern NVIDIA GPU |
+| Windows | **openvino** | Intel | None | Best performance on modern Intel GPU |
 | macOS | **coreml** | Apple Silicon | None | macOS users |
 
 > **Don't trust our binaries?** Fork this repo and run the workflow yourself.
