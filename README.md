@@ -1,4 +1,5 @@
 [![Build Deep-Live-Cam](https://github.com/iikuzmychov/deep-live-cam-builds/actions/workflows/build.yml/badge.svg)](https://github.com/iikuzmychov/deep-live-cam-builds/actions/workflows/build.yml)
+[![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/iikuzmychov/deep-live-cam-builds/total)](https://github.com/iikuzmychov/deep-live-cam-builds/releases)
 
 > This is an **unofficial** community project. Not affiliated with the Deep-Live-Cam developers.
 
