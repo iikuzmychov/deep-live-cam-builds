@@ -5,6 +5,14 @@ on:
     - cron: '0 6 * * *'
   workflow_dispatch:
     inputs:
+      repository:
+        description: 'Repository to build (owner/name)'
+        type: string
+        default: 'hacksider/Deep-Live-Cam'
+      ref:
+        description: 'Git ref to build (branch, tag, or commit SHA)'
+        type: string
+        default: ''
       publish:
         description: 'Publish the release after building'
         type: boolean
@@ -18,33 +26,54 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       skip: ${{ steps.check.outputs.skip }}
+      repo: ${{ steps.check.outputs.repo }}
       upstream_sha: ${{ steps.check.outputs.upstream_sha }}
       short_sha: ${{ steps.check.outputs.short_sha }}
       datetime: ${{ steps.check.outputs.datetime }}
       tag: ${{ steps.check.outputs.tag }}
+      title: ${{ steps.check.outputs.title }}
     steps:
       - name: Check for new upstream release
         id: check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          UPSTREAM_SHA=$(git ls-remote https://github.com/hacksider/Deep-Live-Cam.git HEAD | cut -f1)
+          REPO="${{ inputs.repository || 'hacksider/Deep-Live-Cam' }}"
+          REF="${{ inputs.ref }}"
+          echo "repo=${REPO}" >> "$GITHUB_OUTPUT"
+          if [ -n "$REF" ]; then
+            UPSTREAM_SHA=$(git ls-remote "https://github.com/${REPO}.git" "$REF" | head -1 | cut -f1)
+            if [ -z "$UPSTREAM_SHA" ]; then
+              # ref might be a full commit SHA
+              UPSTREAM_SHA="$REF"
+            fi
+          else
+            UPSTREAM_SHA=$(git ls-remote "https://github.com/${REPO}.git" HEAD | cut -f1)
+          fi
           SHORT_SHA=${UPSTREAM_SHA:0:7}
           DATETIME=$(date +%Y-%m-%d-%H%M)
           echo "upstream_sha=${UPSTREAM_SHA}" >> "$GITHUB_OUTPUT"
           echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
           echo "datetime=${DATETIME}" >> "$GITHUB_OUTPUT"
-          echo "tag=build-${SHORT_SHA}-${DATETIME}" >> "$GITHUB_OUTPUT"
+          if [ "$REPO" = "hacksider/Deep-Live-Cam" ]; then
+            TAG_PREFIX="build-${SHORT_SHA}"
+            echo "tag=build-${SHORT_SHA}-${DATETIME}" >> "$GITHUB_OUTPUT"
+            echo "title=Deep-Live-Cam ${DATETIME} (${SHORT_SHA})" >> "$GITHUB_OUTPUT"
+          else
+            TAG_PREFIX="build-${REPO}-${SHORT_SHA}"
+            echo "tag=build-${REPO}-${SHORT_SHA}-${DATETIME}" >> "$GITHUB_OUTPUT"
+            echo "title=Deep-Live-Cam ${DATETIME} (${REPO}/${SHORT_SHA})" >> "$GITHUB_OUTPUT"
+          fi
 
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "skip=false" >> "$GITHUB_OUTPUT"
             echo "Manual trigger, forcing build."
-          elif gh release list --repo ${{ github.repository }} --json tagName -q '.[].tagName' | grep -q "$SHORT_SHA"; then
+          elif gh release list --repo ${{ github.repository }} --json tagName -q '.[].tagName' | grep -q "^${TAG_PREFIX}"; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "Release for $SHORT_SHA already exists, skipping."
+            echo "Release for ${TAG_PREFIX} already exists, skipping."
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
-            echo "No release for $SHORT_SHA, building."
+            echo "No release for ${TAG_PREFIX}, building."
           fi
 
   create-release:
@@ -56,7 +85,7 @@ jobs:
         shell: bash
         run: |
           cat > release-notes.md << 'NOTES'
-          Built from [hacksider/Deep-Live-Cam](https://github.com/hacksider/Deep-Live-Cam) @ [`${{ needs.check.outputs.short_sha }}`](https://github.com/hacksider/Deep-Live-Cam/commit/${{ needs.check.outputs.upstream_sha }})
+          Built from [${{ needs.check.outputs.repo }}](https://github.com/${{ needs.check.outputs.repo }}) @ [`${{ needs.check.outputs.short_sha }}`](https://github.com/${{ needs.check.outputs.repo }}/commit/${{ needs.check.outputs.upstream_sha }})
 
           ### Which build should I download?
 
@@ -88,7 +117,7 @@ jobs:
         run: |
           gh release create "${{ needs.check.outputs.tag }}" \
             --repo ${{ github.repository }} \
-            --title "Deep-Live-Cam ${{ needs.check.outputs.datetime }} (${{ needs.check.outputs.short_sha }})" \
+            --title "${{ needs.check.outputs.title }}" \
             --notes-file release-notes.md \
             --draft
 
@@ -120,7 +149,10 @@ jobs:
     steps:
       - name: Clone upstream
         shell: bash
-        run: git clone https://github.com/hacksider/Deep-Live-Cam.git upstream
+        run: |
+          git clone "https://github.com/${{ needs.check.outputs.repo }}.git" upstream
+          cd upstream
+          git checkout "${{ needs.check.outputs.upstream_sha }}"
 
       - name: Patch upstream for PyInstaller compatibility
         shell: bash
