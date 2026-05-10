@@ -390,7 +390,7 @@ jobs:
 
   publish-release:
     needs: [check, build]
-    if: needs.check.outputs.skip == 'false' && (github.event_name != 'workflow_dispatch' || inputs.publish)
+    if: needs.check.outputs.skip == 'false' && inputs.publish
     runs-on: ubuntu-latest
     steps:
       - name: Publish release
