@@ -165,6 +165,11 @@ jobs:
           text = text.replace('if to_quit: quit()', 'if to_quit: sys.exit()')
           p.write_text(text)
           "
+          python -c "
+          import pathlib
+          p = pathlib.Path('run.py')
+          p.write_text('print(\"Build commit: ${{ needs.check.outputs.upstream_sha }} (${{ needs.check.outputs.repo }})\")\n' + p.read_text())
+          "
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
