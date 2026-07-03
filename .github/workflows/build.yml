@@ -349,7 +349,7 @@ jobs:
           DIR="$(cd "$(dirname "$0")" && pwd)"
           xattr -cr "$DIR"
           export PATH="$DIR:$PATH"
-          "$DIR/DeepLiveCam" --execution-provider coreml "$@"
+          "$DIR/DeepLiveCam" --execution-provider coreml --max-memory 0 "$@"
           SHEOF
           chmod +x DeepLiveCam/DeepLiveCam.command DeepLiveCam/DeepLiveCam
           cd DeepLiveCam && zip -r ../../../DeepLiveCam-macos-coreml.zip . && cd ..
@@ -376,7 +376,7 @@ jobs:
           brew install coreutils
           xattr -cr .
           export PATH="$(pwd):$PATH"
-          gtimeout 60 ./DeepLiveCam --execution-provider ${{ matrix.provider }} || code=$?
+          gtimeout 60 ./DeepLiveCam --execution-provider ${{ matrix.provider }} --max-memory 0 || code=$?
           if [ "${code:-0}" -eq 124 ]; then
             echo "Smoke test passed (app started and was killed after timeout)"
           else
