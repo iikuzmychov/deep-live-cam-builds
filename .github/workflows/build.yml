@@ -205,7 +205,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: |
-          curl -L -o ffmpeg.zip "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+          curl -fL -o ffmpeg.zip "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
           7z x ffmpeg.zip -offmpeg_tmp
           mkdir -p upstream/ffmpeg
           cp ffmpeg_tmp/ffmpeg-*/bin/ffmpeg.exe upstream/ffmpeg/
@@ -215,9 +215,9 @@ jobs:
         if: runner.os == 'macOS'
         shell: bash
         run: |
-          curl -L -o ffmpeg.zip "https://evermeet.cx/ffmpeg/getrelease/zip"
+          curl -fL -o ffmpeg.zip "https://ffmpeg.martin-riedl.de/redirect/latest/macos/arm64/release/ffmpeg.zip"
           unzip ffmpeg.zip -d upstream/ffmpeg
-          curl -L -o ffprobe.zip "https://evermeet.cx/ffmpeg/getrelease/ffprobe/zip"
+          curl -fL -o ffprobe.zip "https://ffmpeg.martin-riedl.de/redirect/latest/macos/arm64/release/ffprobe.zip"
           unzip ffprobe.zip -d upstream/ffmpeg
 
       - name: Build with PyInstaller
