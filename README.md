@@ -24,7 +24,7 @@ Go to [Releases](../../releases/latest) and grab the right build for your setup:
 | Windows | **openvino** | Intel | None | Best performance on modern Intel GPU |
 | macOS | **coreml** | Apple Silicon | None | macOS users |
 
-> **Don't trust our binaries?** Fork this repo and run the workflow yourself.
+> **Don't trust our binaries?** Fork this repo and run the workflow yourself!
 
 If your GPU isn't supported or unavailable, the app automatically falls back to CPU. CPU mode is **much slower** but works on any machine.
 
